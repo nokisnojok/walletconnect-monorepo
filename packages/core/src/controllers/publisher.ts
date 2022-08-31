@@ -41,6 +41,8 @@ export class Publisher extends IPublisher {
       const hash = hashMessage(message);
       this.queue.set(hash, params);
       await this.rpcPublish(topic, message, ttl, relay, prompt, tag);
+      console.log("publisher > rpcPublish > POST", topic);
+
       this.onPublish(hash, params);
       this.logger.debug(`Successfully Published Payload`);
       this.logger.trace({ type: "method", method: "publish", params: { topic, message, opts } });

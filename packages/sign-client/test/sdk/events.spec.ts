@@ -213,6 +213,8 @@ describe("Sign Client Events Validation", () => {
             resolve();
           });
 
+          // console.log("EVENTS: ", sessionA.topic);
+
           clients.A.disconnect({ topic: sessionA.topic, reason: getSdkError("USER_DISCONNECTED") });
         } catch (e) {
           reject(e);

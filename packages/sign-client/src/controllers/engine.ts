@@ -91,6 +91,7 @@ export class Engine extends IEngine {
     if (topic) {
       const pairing = this.client.pairing.get(topic);
       active = pairing.active;
+      console.log("[IMPL] GOT PAIRING: ", pairing);
     }
 
     if (!topic || !active) {
@@ -113,6 +114,7 @@ export class Engine extends IEngine {
     this.events.once<"session_connect">(
       engineEvent("session_connect"),
       async ({ error, session }) => {
+        console.log("[IMPL] engineEvent session_connect ", error, session);
         if (error) reject(error);
         else if (session) {
           session.self.publicKey = publicKey;
@@ -131,7 +133,9 @@ export class Engine extends IEngine {
       throw new Error(message);
     }
 
+    console.log("[IMPL] sendRequest > wc_sessionPropose > PRE");
     const id = await this.sendRequest(topic, "wc_sessionPropose", proposal);
+    console.log("[IMPL] sendRequest > wc_sessionPropose > POST");
     const expiry = calcExpiry(FIVE_MINUTES);
     await this.setProposal(id, { id, expiry, ...proposal });
 
@@ -397,6 +401,8 @@ export class Engine extends IEngine {
     const message = await this.client.core.crypto.encode(topic, payload);
     const opts = ENGINE_RPC_OPTS[method].req;
     await this.client.core.relayer.publish(topic, message, opts);
+    console.log("sendRequest > relayer.publish > POST");
+
     this.client.history.set(topic, payload);
 
     return payload.id;
@@ -454,11 +460,22 @@ export class Engine extends IEngine {
       RELAYER_EVENTS.message,
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message } = event;
+        console.log(`[IMPL] [${this.client.name}] RELAYER_EVENTS.message:`, topic);
         const payload = await this.client.core.crypto.decode(topic, message);
         if (isJsonRpcRequest(payload)) {
+          console.log(
+            `[IMPL] [${this.client.name}] RELAYER_EVENTS REQUEST payload:`,
+            topic,
+            payload,
+          );
           this.client.history.set(topic, payload);
           this.onRelayEventRequest({ topic, payload });
         } else if (isJsonRpcResponse(payload)) {
+          console.log(
+            `[IMPL] [${this.client.name}] RELAYER_EVENTS RESPONSE payload:`,
+            topic,
+            payload,
+          );
           await this.client.history.resolve(payload);
           this.onRelayEventResponse({ topic, payload });
         }
@@ -530,9 +547,11 @@ export class Engine extends IEngine {
     const { params, id } = payload;
     try {
       this.isValidConnect({ ...payload.params });
+
       const expiry = calcExpiry(FIVE_MINUTES);
       const proposal = { id, pairingTopic: topic, expiry, ...params };
       await this.setProposal(id, proposal);
+      console.log(`[IMPL] ${this.client.name} EMIT SESSION_PROPOSAL`);
       this.client.events.emit("session_proposal", { id, params: proposal });
     } catch (err: any) {
       await this.sendError(id, topic, err);

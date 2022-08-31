@@ -5,6 +5,7 @@ import {
   initTwoClients,
   testConnectMethod,
   TEST_SIGN_CLIENT_OPTIONS,
+  TEST_NAMESPACES,
   deleteClients,
 } from "../shared";
 import { SEVEN_DAYS } from "@walletconnect/time";
@@ -18,23 +19,73 @@ describe("Sign Client Integration", () => {
     expect(client).to.be.exist;
   });
 
-  describe("connect", () => {
-    it("connect (with new pairing)", async () => {
+  describe.only("connect", () => {
+    it.skip("connect (with new pairing)", async () => {
       const clients = await initTwoClients();
       await testConnectMethod(clients);
       deleteClients(clients);
     });
     it("connect (with old pairing)", async () => {
       const clients = await initTwoClients();
-      await testConnectMethod(clients);
+
+      // DEBUG - Manual listener for connect 1
+      // clients.B.once("session_proposal", async (proposal) => {
+      //   console.log("___ GOT PROPOSAL 1____ ", proposal);
+      //   const { acknowledged, topic } = await clients.B.approve({
+      //     id: proposal.id,
+      //     namespaces: TEST_NAMESPACES,
+      //   });
+      //   const session = await acknowledged();
+      //   console.log("YOYO 1:", session);
+
+      //   // if (!sessionB) {
+      //   //   sessionB = await acknowledged();
+      //   // }
+      // });
+
+      const { sessionA, pairingA } = await testConnectMethod(clients);
+      console.log("[CUSTOM] CONN 1");
+
       const { A, B } = clients;
       expect(A.pairing.keys).to.eql(B.pairing.keys);
+      console.log("[CUSTOM] EXPECT 1");
+      console.log("[CUSTOM] pairing.keys", A.pairing.keys, B.pairing.keys);
+      console.log("[CUSTOM] session.keys", A.session.keys, B.session.keys);
       const { topic: pairingTopic } = A.pairing.get(A.pairing.keys[0]);
+      console.log("[CUSTOM] pairingTopic:", pairingTopic);
+      console.log("[CUSTOM] sessionA.topic:", sessionA.topic);
+
+      // console.log("PRE: DISCONN");
+      // await clients.A.disconnect({
+      //   topic: pairingTopic,
+      //   reason: getSdkError("USER_DISCONNECTED"),
+      // });
+      console.log("\n\n-------------------------------------------\n\n");
+
+      console.log("[CUSTOM] PRE CONN 2");
+
+      // DEBUG - Manual listener for connect 2
+      // B.once("session_proposal", async (proposal) => {
+      //   console.log("___ GOT PROPOSAL 2 ____ ", proposal);
+      //   const { acknowledged, topic } = await B.approve({
+      //     id: proposal.id,
+      //     namespaces: TEST_NAMESPACES,
+      //   });
+      //   const session = await acknowledged();
+      //   console.log("YOYO 2:", session);
+
+      //   // if (!sessionB) {
+      //   //   sessionB = await acknowledged();
+      //   // }
+      // });
+
       await testConnectMethod(clients, {
         pairingTopic,
       });
+
+      console.log("[CUSTOM] POST CONN 2");
       deleteClients(clients);
-    }, 120_000);
+    });
   });
 
   describe("disconnect", () => {
